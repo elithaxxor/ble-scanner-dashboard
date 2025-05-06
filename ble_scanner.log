@@ -18,3 +18,4 @@
 2025-05-06 13:38:35,431 - notifications - INFO - Discord notification sent successfully
 2025-05-06 13:38:35,432 - notifications - INFO - Telegram notification sent successfully
 2025-05-06 13:38:35,432 - notifications - INFO - WhatsApp notification sent successfully
+2025-05-06 14:50:59,421 - __main__ - ERROR - Unexpected error during database initialization: You can only execute one statement at a time.
