@@ -1,0 +1,20 @@
+2025-05-05 21:48:35,701 - __main__ - INFO - Database initialized successfully
+2025-05-05 22:08:58,790 - __main__ - INFO - Database initialized successfully
+2025-05-05 22:08:58,944 - __main__ - INFO - Starting notification test...
+2025-05-05 22:08:58,946 - notifications - WARNING - Discord webhook URL not configured
+2025-05-05 22:08:58,946 - notifications - WARNING - Telegram bot token or chat ID not configured
+2025-05-05 22:08:58,946 - notifications - WARNING - WhatsApp configuration incomplete
+2025-05-05 22:08:58,946 - notifications - ERROR - Failed to send notifications to any channel
+2025-05-05 22:08:59,069 - __main__ - ERROR - Error during BLE scan test: [Errno 2] No such file or directory
+2025-05-06 13:37:55,543 - notifications - INFO - Discord notification sent successfully
+2025-05-06 13:37:55,544 - notifications - INFO - Telegram notification sent successfully
+2025-05-06 13:37:55,545 - notifications - INFO - WhatsApp notification sent successfully
+2025-05-06 13:38:35,426 - app - INFO - Updated device 00:11:22:33:44:55 (Count: 2)
+2025-05-06 13:38:35,429 - app - INFO - New device detected: 00:11:22:33:44:55
+2025-05-06 13:38:35,430 - notifications - WARNING - Discord webhook URL not configured
+2025-05-06 13:38:35,430 - notifications - WARNING - Telegram bot token or chat ID not configured
+2025-05-06 13:38:35,430 - notifications - WARNING - WhatsApp configuration incomplete
+2025-05-06 13:38:35,430 - notifications - ERROR - Failed to send notifications to any channel
+2025-05-06 13:38:35,431 - notifications - INFO - Discord notification sent successfully
+2025-05-06 13:38:35,432 - notifications - INFO - Telegram notification sent successfully
+2025-05-06 13:38:35,432 - notifications - INFO - WhatsApp notification sent successfully
