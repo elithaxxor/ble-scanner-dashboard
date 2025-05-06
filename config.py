@@ -17,7 +17,7 @@ HUMAN_RSSI_THRESHOLD = int(os.getenv("HUMAN_RSSI_THRESHOLD", "-70"))  # RSSI thr
 
 # Web interface configuration
 WEB_HOST = '0.0.0.0'
-WEB_PORT = 8000
+WEB_PORT = 4128
 DEBUG_MODE = True
 
 # Logging configuration
