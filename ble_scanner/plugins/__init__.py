@@ -55,6 +55,9 @@ class RadioBackend(ABC):
 
 _MODULES: Dict[str, str] = {
     "bluez": "ble_scanner.plugins.bluez",
+    "ubertooth": "ble_scanner.plugins.ubertooth",
+    "nrf": "ble_scanner.plugins.nrf",
+    "btlejack": "ble_scanner.plugins.btlejack",
 }
 
 _BACKENDS: Dict[str, Type[RadioBackend]] = {}
@@ -74,5 +77,3 @@ def get_backend(name: str) -> Optional[Type[RadioBackend]]:
     backend = getattr(module, "Backend")
     _BACKENDS[key] = backend
     return backend
-
-
