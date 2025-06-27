@@ -14,6 +14,7 @@ from bleak import BleakScanner
 from config import DB_PATH
 from plugins import dispatch_event
 from mqtt_client import publish_event
+from notifications import send_all_notifications
 from core.db import init_db, purge_old_entries
 from core.utils import setup_logging
 from vendor_lookup import load_vendor_data, lookup_vendor
@@ -43,6 +44,10 @@ def broadcast_event(event: dict) -> None:
     EVENT_BUS.put_nowait(event)
     dispatch_event(event)
     publish_event(event)
+    try:
+        send_all_notifications(f"New BLE device {event.get('address')}")
+    except Exception as exc:  # pragma: no cover - network errors
+        logger.error("Notification error: %s", exc)
 
 
 def load_vendor_cache(path: Path = MASTER_MAC_PATH) -> None:
@@ -77,6 +82,27 @@ def parse_ibeacon(data: bytes) -> Optional[Dict[str, str]]:
         "minor": int.from_bytes(data[20:22], "big"),
         "tx_power": int.from_bytes(data[22:23], "big", signed=True),
     }
+
+
+def parse_eddystone(data: bytes) -> Optional[Dict[str, str]]:
+    if not data:
+        return None
+    frame_type = data[0]
+    if frame_type == 0x00 and len(data) >= 18:
+        return {
+            "type": "uid",
+            "tx_power": int.from_bytes(data[1:2], "big", signed=True),
+            "namespace": data[2:12].hex(),
+            "instance": data[12:18].hex(),
+        }
+    if frame_type == 0x10 and len(data) >= 4:
+        url = data[2:].decode(errors="ignore")
+        return {
+            "type": "url",
+            "tx_power": int.from_bytes(data[1:2], "big", signed=True),
+            "url": url,
+        }
+    return None
 
 
 def _update_device_sync(address: str, name: str, rssi: int, vendor: Optional[str]) -> None:
@@ -128,12 +154,22 @@ async def scan_once() -> None:
     for dev in devices:
         if dev.address and dev.rssi is not None:
             await update_device(dev.address, dev.name or "Unknown", dev.rssi)
+            ibeacon = None
+            eddystone = None
+            mfg_data = dev.metadata.get("manufacturer_data", {})
+            for cid, payload in mfg_data.items():
+                if cid == 0x004C:  # Apple iBeacon
+                    ibeacon = parse_ibeacon(bytes(payload))
+                if cid == 0xFEAA:  # Eddystone
+                    eddystone = parse_eddystone(bytes(payload))
             broadcast_event(
                 {
                     "address": dev.address,
                     "name": dev.name,
                     "rssi": dev.rssi,
                     "aoa": await direction_finding_stub(dev),
+                    "ibeacon": ibeacon,
+                    "eddystone": eddystone,
                 }
             )
 

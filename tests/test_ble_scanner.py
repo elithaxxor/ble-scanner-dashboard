@@ -1,5 +1,5 @@
 import asyncio
-from core.scanner import EVENT_BUS, parse_ibeacon
+from core.scanner import EVENT_BUS, parse_ibeacon, parse_eddystone
 
 
 def test_event_bus():
@@ -16,3 +16,9 @@ def test_parse_ibeacon():
     res = parse_ibeacon(payload)
     assert res["major"] == 0
     assert res["minor"] == 0
+
+
+def test_parse_eddystone():
+    payload = bytes([0x00, 0xC5]) + b"\x01" * 16
+    res = parse_eddystone(payload)
+    assert res["type"] == "uid"
