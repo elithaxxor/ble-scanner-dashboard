@@ -8,6 +8,8 @@ from typing import Dict, Optional
 from bleak import BleakScanner
 
 from config import DB_PATH, LOG_FILE, LOG_LEVEL
+from plugins import dispatch_event
+from mqtt_client import publish_event
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -21,6 +23,13 @@ EVENT_BUS: "asyncio.Queue[dict]" = asyncio.Queue()
 VENDOR_CACHE: Dict[str, str] = {}
 
 MASTER_MAC_PATH = Path("master_mac.csv")
+
+
+def broadcast_event(event: dict) -> None:
+    """Send event to the queue, plugins and MQTT broker."""
+    EVENT_BUS.put_nowait(event)
+    dispatch_event(event)
+    publish_event(event)
 
 
 def load_vendor_cache(path: Path = MASTER_MAC_PATH) -> None:
@@ -93,7 +102,7 @@ async def scan_once() -> None:
     for dev in devices:
         if dev.address and dev.rssi is not None:
             await update_device(dev.address, dev.name or "Unknown", dev.rssi)
-            await EVENT_BUS.put(
+            broadcast_event(
                 {
                     "address": dev.address,
                     "name": dev.name,
