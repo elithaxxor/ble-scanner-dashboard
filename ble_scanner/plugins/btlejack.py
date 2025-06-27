@@ -1,17 +1,33 @@
+
 from __future__ import annotations
 
 import asyncio
 from datetime import datetime
 from typing import AsyncIterator
 
+"""Btlejack radio backend."""
+
+from __future__ import annotations
+
+import asyncio
+import re
+from datetime import datetime
+from typing import AsyncIterator, Iterable, Optional
+
+
 from . import RadioBackend, RawPacket
 
 
 class Backend(RadioBackend):
+
     """BtleJack implementation of :class:`RadioBackend`."""
+
+    """Btlejack implementation of :class:`RadioBackend`."""
+
 
     name = "btlejack"
     capabilities = {"advertising"}
+
 
     def __init__(self, command: str = "btlejack") -> None:
         self.command = command
@@ -32,11 +48,34 @@ class Backend(RadioBackend):
                 if len(parts) < 2:
                     continue
                 addr, rssi = parts[0], int(parts[-1])
+
+    def __init__(self, command: Iterable[str] | None = None) -> None:
+        self.command = list(command) if command else ["btlejack", "-f"]
+
+    def _parse_line(self, line: str) -> tuple[Optional[str], Optional[int]]:
+        match = re.search(r"([0-9A-Fa-f:]{11,17}).*?(-?\d+)", line)
+        if match:
+            return match.group(1), int(match.group(2))
+        return None, None
+
+    async def scan(self) -> AsyncIterator[RawPacket]:
+        proc = await asyncio.create_subprocess_exec(
+            *self.command,
+            stdout=asyncio.subprocess.PIPE,
+        )
+        try:
+            while True:
+                line = await proc.stdout.readline()
+                if not line:
+                    break
+                address, rssi = self._parse_line(line.decode(errors="ignore"))
+
                 yield RawPacket(
                     timestamp=datetime.now(),
                     phy="LE1M",
                     channel=None,
                     rssi=rssi,
+
                     address=addr,
                     payload=b"",
                 )
@@ -44,3 +83,12 @@ class Backend(RadioBackend):
         finally:
             proc.kill()
             await proc.wait()
+
+                    address=address,
+                    payload=line.rstrip(b"\n"),
+                )
+        finally:
+            if proc.returncode is None:
+                proc.kill()
+                await proc.wait()
+

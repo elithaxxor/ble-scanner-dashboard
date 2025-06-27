@@ -24,6 +24,29 @@ class DummyDevice(SimpleNamespace):
     pass
 
 
+
+class DummyProcess:
+    def __init__(self, lines):
+        self._lines = [l.encode() for l in lines]
+        self.returncode = None
+
+    async def _readline(self):
+        if self._lines:
+            return self._lines.pop(0)
+        return b""
+
+    @property
+    def stdout(self):
+        return SimpleNamespace(readline=self._readline)
+
+    def kill(self):
+        self.returncode = 0
+
+    terminate = kill
+
+    async def wait(self):
+        pass
+
 def test_get_backend_imports_module(monkeypatch):
     class DummyBackend:
         pass
@@ -46,10 +69,12 @@ def test_get_backend_imports_module(monkeypatch):
     plugins_mod._BACKENDS.clear()
 
 
+
 @pytest.mark.asyncio
 async def test_get_backend():
-    backend_cls = get_backend("bluez")
-    assert backend_cls is not None
+    for name in ("bluez", "ubertooth", "nrf", "btlejack"):
+        backend_cls = get_backend(name)
+        assert backend_cls is not None
 
 
 @pytest.mark.asyncio
@@ -65,6 +90,72 @@ async def test_bluez_backend_scan(monkeypatch):
         gen = backend.scan()
         packet = await gen.__anext__()
         assert packet.address == "AA:BB"
+        await gen.aclose()
+
+
+@pytest.mark.asyncio
+async def test_ubertooth_backend_scan(monkeypatch):
+    backend_cls = get_backend("ubertooth")
+    assert backend_cls is not None
+
+    proc = DummyProcess(["AA:BB:CC:DD:EE:FF -40"])
+
+    async def fake_exec(*args, **kwargs):
+        return proc
+
+    with patch(
+        "ble_scanner.plugins.ubertooth.asyncio.create_subprocess_exec",
+        fake_exec,
+    ):
+        backend = backend_cls()
+        gen = backend.scan()
+        packet = await gen.__anext__()
+        assert packet.address == "AA:BB:CC:DD:EE:FF"
+        assert packet.rssi == -40
+        await gen.aclose()
+
+
+@pytest.mark.asyncio
+async def test_nrf_backend_scan(monkeypatch):
+    backend_cls = get_backend("nrf")
+    assert backend_cls is not None
+
+    proc = DummyProcess(["11:22:33:44:55:66 -30"])
+
+    async def fake_exec(*args, **kwargs):
+        return proc
+
+    with patch(
+        "ble_scanner.plugins.nrf.asyncio.create_subprocess_exec",
+        fake_exec,
+    ):
+        backend = backend_cls()
+        gen = backend.scan()
+        packet = await gen.__anext__()
+        assert packet.address == "11:22:33:44:55:66"
+        assert packet.rssi == -30
+        await gen.aclose()
+
+
+@pytest.mark.asyncio
+async def test_btlejack_backend_scan(monkeypatch):
+    backend_cls = get_backend("btlejack")
+    assert backend_cls is not None
+
+    proc = DummyProcess(["FF:EE:DD:CC:BB:AA -25"])
+
+    async def fake_exec(*args, **kwargs):
+        return proc
+
+    with patch(
+        "ble_scanner.plugins.btlejack.asyncio.create_subprocess_exec",
+        fake_exec,
+    ):
+        backend = backend_cls()
+        gen = backend.scan()
+        packet = await gen.__anext__()
+        assert packet.address == "FF:EE:DD:CC:BB:AA"
+        assert packet.rssi == -25
         await gen.aclose()
 
 
