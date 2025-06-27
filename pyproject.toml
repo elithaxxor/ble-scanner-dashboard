@@ -16,6 +16,9 @@ dependencies = [
     "paho-mqtt",
     "sqlmodel",
     "alembic",
+    "SQLModel",
+    "alembic",
+    "pyshark",
 ]
 
 [project.scripts]

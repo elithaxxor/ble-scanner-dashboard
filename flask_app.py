@@ -3,6 +3,8 @@
 import asyncio
 import json
 import signal
+import json
+from sqlmodel import Session, select
 from typing import List
 
 from flask import Flask, redirect, render_template_string, request, url_for
@@ -47,6 +49,23 @@ def index():
                 "rssi": rssi,
             })
     return render_template_string(TEMPLATE, devices=results)
+    from core.db import get_engine
+    from core.models import Device
+
+    engine = get_engine()
+    with Session(engine) as session:
+        stmt = select(Device).order_by(Device.last_seen.desc()).limit(20)
+        rows = session.exec(stmt).all()
+        devices = [
+            {
+                "mac": d.mac,
+                "vendor": d.vendor,
+                "last_seen": d.last_seen,
+                "rssi": (json.loads(d.rssi_history or "[]") or [{}])[-1].get("rssi"),
+            }
+            for d in rows
+        ]
+    return render_template_string(TEMPLATE, devices=devices)
 
 
 @app.get("/history")
@@ -62,6 +81,21 @@ def history():
             .offset(offset)
         )
         rows = [r.dict() for r in session.exec(stmt)]
+    from core.db import get_engine
+    from core.models import Device
+
+    engine = get_engine()
+    with Session(engine) as session:
+        stmt = (
+            select(Device.mac, Device.vendor, Device.last_seen)
+            .order_by(Device.last_seen.desc())
+            .offset(offset)
+            .limit(per_page)
+        )
+        rows = [
+            {"mac": d.mac, "vendor": d.vendor, "last_seen": d.last_seen}
+            for d in session.exec(stmt)
+        ]
     next_url = url_for("history", page=page + 1)
     prev_url = url_for("history", page=page - 1) if page > 1 else None
     html = (

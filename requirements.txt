@@ -16,3 +16,6 @@ pytest-asyncio
 paho-mqtt
 sqlmodel
 alembic
+SQLModel
+alembic
+pyshark

@@ -23,7 +23,11 @@ from typing import AsyncIterator, Dict, Optional, Set, Type
 __all__ = [
     "RawPacket",
     "RadioBackend",
+
     "BlueZBackend",
+    "UbertoothBackend",
+    "NrfBackend",
+    "BtlejackBackend",
     "get_backend",
 ]
 
@@ -54,17 +58,47 @@ class RadioBackend(ABC):
         """Yield raw packets from the radio."""
 
 
+_MODULES: Dict[str, str] = {
+    "bluez": "ble_scanner.plugins.bluez",
+    "ubertooth": "ble_scanner.plugins.ubertooth",
+    "nrf": "ble_scanner.plugins.nrf",
+    "btlejack": "ble_scanner.plugins.btlejack",
+}
+
+_BACKENDS: Dict[str, Type[RadioBackend]] = {}
+
+
 def get_backend(name: str) -> Optional[Type[RadioBackend]]:
     """Return backend class by name."""
 
+
     modules: Dict[str, str] = {
         "bluez": "ble_scanner.plugins.bluez",
+        "ubertooth": "ble_scanner.plugins.ubertooth",
+        "nrf": "ble_scanner.plugins.nrf",
+        "btlejack": "ble_scanner.plugins.btlejack",
     }
     module_name = modules.get(name.lower())
+
+    key = name.lower()
+    if key in _BACKENDS:
+        return _BACKENDS[key]
+
+    module_name = _MODULES.get(key)
+
     if module_name is None:
         return None
     module = importlib.import_module(module_name)
-    return getattr(module, "Backend")
+    backend = getattr(module, "Backend")
+    _BACKENDS[key] = backend
+    return backend
+
+
 
 
 from .bluez import Backend as BlueZBackend
+from .ubertooth import Backend as UbertoothBackend
+from .nrf import Backend as NrfBackend
+from .btlejack import Backend as BtlejackBackend
+
+

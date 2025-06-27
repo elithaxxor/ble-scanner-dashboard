@@ -1,6 +1,8 @@
 import asyncio
 import json
 import logging
+
+from sqlmodel import Session, select
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +15,7 @@ from sqlmodel import Session
 
 from core.db import get_engine, init_db, purge_old_entries
 from core.models import Device
+from core.db import init_db, purge_old_entries
 from core.utils import setup_logging
 from mqtt_client import publish_event
 from notifications import send_all_notifications
@@ -110,6 +113,9 @@ def parse_eddystone(data: bytes) -> Optional[Dict[str, str]]:
 def _update_device_sync(
     address: str, _name: str, rssi: int, vendor: Optional[str]
 ) -> None:
+    from core.db import get_engine  # imported here to avoid circular import
+    from core.models import Device
+
     try:
         with Session(get_engine()) as session:
             now = datetime.now()
@@ -122,6 +128,19 @@ def _update_device_sync(
                 device.rssi_history = json.dumps(history)
             else:
                 device = Device(
+
+        engine = get_engine()
+        now = datetime.now()
+        with Session(engine) as session:
+            result = session.exec(select(Device).where(Device.mac == address)).first()
+            if result:
+                history = json.loads(result.rssi_history or "[]")
+                history.append({"t": now.isoformat(), "rssi": rssi})
+                result.last_seen = now
+                result.vendor = vendor
+                result.rssi_history = json.dumps(history)
+            else:
+                result = Device(
                     mac=address,
                     vendor=vendor,
                     first_seen=now,
@@ -129,6 +148,7 @@ def _update_device_sync(
                     rssi_history=json.dumps([{"t": now.isoformat(), "rssi": rssi}]),
                 )
                 session.add(device)
+                session.add(result)
             session.commit()
     except Exception as exc:
         logger.error("DB error: %s", exc)
