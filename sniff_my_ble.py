@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import logging
 import signal
+import sys
 from core.scanner import run_scanner
 from core.utils import setup_logging
 
@@ -15,11 +16,10 @@ def _handle_stop(signame: str) -> None:
 
 
 async def main(interval: int, workers: int) -> None:
-    tasks = [asyncio.create_task(run_scanner(interval)) for _ in range(workers)]
+    scanner_task = asyncio.create_task(run_scanner(interval, workers))
     await stop_event.wait()
-    for t in tasks:
-        t.cancel()
-    await asyncio.gather(*tasks, return_exceptions=True)
+    scanner_task.cancel()
+    await asyncio.gather(scanner_task, return_exceptions=True)
 
 
 if __name__ == "__main__":
@@ -32,5 +32,9 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, lambda s=sig: _handle_stop(sig.name))
+    loop.add_reader(
+        sys.stdin,
+        lambda: _handle_stop("keyboard") if sys.stdin.read(1).lower() == "q" else None,
+    )
 
     loop.run_until_complete(main(args.interval, args.workers))

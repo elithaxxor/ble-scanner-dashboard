@@ -34,3 +34,8 @@ WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "")
 WHATSAPP_AUTH_TOKEN = os.getenv("WHATSAPP_AUTH_TOKEN", "")
 WHATSAPP_FROM = os.getenv("WHATSAPP_FROM", "")
 WHATSAPP_TO = os.getenv("WHATSAPP_TO", "")
+
+# External API configuration
+SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "")
+WIGLE_API_NAME = os.getenv("WIGLE_API_NAME", "")
+WIGLE_API_TOKEN = os.getenv("WIGLE_API_TOKEN", "")

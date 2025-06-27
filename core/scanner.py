@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
+from mac_vendor_lookup import MacLookup
+
 from bleak import BleakScanner
 
 from config import DB_PATH
@@ -22,6 +24,7 @@ EVENT_BUS: "asyncio.Queue[dict]" = asyncio.Queue()
 EXECUTOR = ThreadPoolExecutor()
 
 VENDOR_CACHE: Dict[str, str] = {}
+MAC_LOOKUP = MacLookup()
 
 MASTER_MAC_PATH = Path("master_mac.csv")
 
@@ -46,6 +49,17 @@ def load_vendor_cache(path: Path = MASTER_MAC_PATH) -> None:
                 mac, vendor = line.strip().split(",", 1)
                 VENDOR_CACHE[mac.upper()] = vendor
     logger.info("Loaded %d vendors", len(VENDOR_CACHE))
+
+
+def vendor_for_mac(address: str) -> Optional[str]:
+    """Return vendor for a MAC using cache or online lookup."""
+    prefix = address.upper().replace(":", "")[:6]
+    if prefix in VENDOR_CACHE:
+        return VENDOR_CACHE[prefix]
+    try:
+        return MAC_LOOKUP.lookup(address)
+    except Exception:
+        return None
 
 
 async def direction_finding_stub(device) -> Optional[float]:
@@ -74,7 +88,7 @@ def _update_device_sync(address: str, name: str, rssi: int) -> None:
             (address,),
         )
         res = cursor.fetchone()
-        vendor = VENDOR_CACHE.get(address[:8].upper())
+        vendor = vendor_for_mac(address)
         if res:
             new_count = res[0] + 1
             cursor.execute(
@@ -121,13 +135,21 @@ async def scan_once() -> None:
             )
 
 
-async def run_scanner(interval: int = 5) -> None:
+async def _worker(interval: int) -> None:
+    while True:
+        await scan_once()
+        await asyncio.sleep(interval)
+
+
+async def run_scanner(interval: int = 5, workers: int = 1) -> None:
     load_vendor_cache()
     init_db()
     purge_old_entries()
+    tasks = [asyncio.create_task(_worker(interval)) for _ in range(workers)]
     try:
-        while True:
-            await scan_once()
-            await asyncio.sleep(interval)
+        await asyncio.gather(*tasks)
     except asyncio.CancelledError:
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         logger.info("Scanner stopped")
