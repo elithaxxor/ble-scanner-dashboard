@@ -24,6 +24,9 @@ __all__ = [
     "RawPacket",
     "RadioBackend",
     "BlueZBackend",
+    "UbertoothBackend",
+    "NrfBackend",
+    "BtlejackBackend",
     "get_backend",
 ]
 
@@ -59,6 +62,9 @@ def get_backend(name: str) -> Optional[Type[RadioBackend]]:
 
     modules: Dict[str, str] = {
         "bluez": "ble_scanner.plugins.bluez",
+        "ubertooth": "ble_scanner.plugins.ubertooth",
+        "nrf": "ble_scanner.plugins.nrf",
+        "btlejack": "ble_scanner.plugins.btlejack",
     }
     module_name = modules.get(name.lower())
     if module_name is None:
@@ -68,3 +74,6 @@ def get_backend(name: str) -> Optional[Type[RadioBackend]]:
 
 
 from .bluez import Backend as BlueZBackend
+from .ubertooth import Backend as UbertoothBackend
+from .nrf import Backend as NrfBackend
+from .btlejack import Backend as BtlejackBackend
