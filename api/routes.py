@@ -33,4 +33,3 @@ async def set_config(
     config.TELEGRAM_BOT_TOKEN = telegram_token
     config.TELEGRAM_CHAT_ID = telegram_chat
     return RedirectResponse(url="/config", status_code=303)
-

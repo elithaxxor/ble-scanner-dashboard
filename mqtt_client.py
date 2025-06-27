@@ -33,5 +33,3 @@ def publish_event(event: dict) -> None:
         _client.publish(MQTT_TOPIC, payload)
     except Exception as exc:
         logger.error("MQTT publish failed: %s", exc)
-
-

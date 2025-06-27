@@ -1,24 +1,25 @@
 import asyncio
 import logging
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
 from bleak import BleakScanner
 
-from config import DB_PATH, LOG_FILE, LOG_LEVEL
+from config import DB_PATH
 from plugins import dispatch_event
 from mqtt_client import publish_event
+from core.db import init_db, purge_old_entries
+from core.utils import setup_logging
+from vendor_prefixes import VENDOR_PREFIXES
 
+setup_logging()
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=getattr(logging, LOG_LEVEL),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 
 EVENT_BUS: "asyncio.Queue[dict]" = asyncio.Queue()
+EXECUTOR = ThreadPoolExecutor()
 
 VENDOR_CACHE: Dict[str, str] = {}
 
@@ -33,8 +34,11 @@ def broadcast_event(event: dict) -> None:
 
 
 def load_vendor_cache(path: Path = MASTER_MAC_PATH) -> None:
+    """Load vendor prefixes from builtin list and optional CSV file."""
+    VENDOR_CACHE.update(VENDOR_PREFIXES)
     if not path.exists():
         logger.warning("Vendor map file not found: %s", path)
+        logger.info("Using %d built-in vendors", len(VENDOR_CACHE))
         return
     with path.open() as f:
         for line in f:
@@ -60,7 +64,7 @@ def parse_ibeacon(data: bytes) -> Optional[Dict[str, str]]:
     }
 
 
-async def update_device(address: str, name: str, rssi: int) -> None:
+def _update_device_sync(address: str, name: str, rssi: int) -> None:
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -97,6 +101,11 @@ async def update_device(address: str, name: str, rssi: int) -> None:
             conn.close()
 
 
+async def update_device(address: str, name: str, rssi: int) -> None:
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(EXECUTOR, _update_device_sync, address, name, rssi)
+
+
 async def scan_once() -> None:
     devices = await BleakScanner.discover()
     for dev in devices:
@@ -114,6 +123,11 @@ async def scan_once() -> None:
 
 async def run_scanner(interval: int = 5) -> None:
     load_vendor_cache()
-    while True:
-        await scan_once()
-        await asyncio.sleep(interval)
+    init_db()
+    purge_old_entries()
+    try:
+        while True:
+            await scan_once()
+            await asyncio.sleep(interval)
+    except asyncio.CancelledError:
+        logger.info("Scanner stopped")

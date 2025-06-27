@@ -115,6 +115,10 @@ A modern Bluetooth Low Energy (BLE) scanner that monitors nearby devices and pro
 - 📡 MQTT broadcasting alongside WebSocket updates
 - 🐳 Headless container mode for lightweight deployments
 - 🛠️ Web-based configuration page
+- 📝 Rotating log files with archival
+- 🧩 Vendor prefix lookup for device manufacturers
+- ⚡ Concurrent scanning workers via asyncio
+- 🕹️ `sniff_my_ble.py` script with hotkey shutdown
 
 ## Requirements
 
@@ -160,11 +164,38 @@ python app.py
 ```
 This will begin scanning for nearby Bluetooth devices and logging their presence to the database.
 
+Alternatively run the enhanced script:
+```bash
+python sniff_my_ble.py --interval 5 --workers 2
+```
+Sample output:
+```text
+2024-05-10 12:00:00 INFO core.scanner - Loaded 3 vendors
+2024-05-10 12:00:05 INFO core.scanner - Scanner stopped
+```
+
 2. In a separate terminal, start the web dashboard:
 ```bash
 python web_app.py
 ```
 The dashboard will be available at http://localhost:8000
+
+You can also launch the minimal Flask viewer:
+```bash
+python flask_app.py
+```
+which serves recent logs on port 5000.
+
+### PowerShell example
+Run continuous scans on Windows:
+```powershell
+./scan_bluetooth.ps1 -Interval 10 -Continuous
+```
+Typical output:
+```text
+🔍 Starting BLE scan...
+✅ Scan complete
+```
 
 ## Dashboard Features
 
