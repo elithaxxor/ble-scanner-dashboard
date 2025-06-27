@@ -24,6 +24,7 @@ class DummyDevice(SimpleNamespace):
     pass
 
 
+
 class DummyProcess:
     def __init__(self, lines):
         self._lines = [l.encode() for l in lines]
@@ -45,6 +46,29 @@ class DummyProcess:
 
     async def wait(self):
         pass
+
+def test_get_backend_imports_module(monkeypatch):
+    class DummyBackend:
+        pass
+
+    dummy_module = SimpleNamespace(Backend=DummyBackend)
+
+    called = {}
+
+    def fake_import(name):
+        called["name"] = name
+        return dummy_module
+
+    monkeypatch.setattr(
+        "ble_scanner.plugins.importlib.import_module", fake_import
+    )
+
+    backend_cls = get_backend("bluez")
+    assert backend_cls is DummyBackend
+    assert called["name"] == "ble_scanner.plugins.bluez"
+    from ble_scanner import plugins as plugins_mod
+    plugins_mod._BACKENDS.clear()
+
 
 
 @pytest.mark.asyncio
