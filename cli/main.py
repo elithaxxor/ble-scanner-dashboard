@@ -28,6 +28,7 @@ def scan(
     threads: int = 1,
     processes: int = 0,
     threaded_scan: bool = False,
+    backend: str = "bleak",
 ):
     """Run BLE scanner."""
     load_plugins()
@@ -35,16 +36,28 @@ def scan(
     stop_event = asyncio.Event()
 
     async def runner() -> None:
-        task = asyncio.create_task(
-            run_scanner(
-                interval,
-                workers,
-                threads,
-                processes,
-                stop_event=stop_event,
-                threaded_scan=threaded_scan,
-            ),
-        )
+        if backend == "bleak":
+            task = asyncio.create_task(
+                run_scanner(
+                    interval,
+                    workers,
+                    threads,
+                    processes,
+                    stop_event=stop_event,
+                    threaded_scan=threaded_scan,
+                ),
+            )
+        else:
+            from ble_scanner.plugins import get_backend
+            from core.scanner import run_radio_backend
+
+            backend_cls = get_backend(backend)
+            if backend_cls is None:
+                logger.error("Unknown backend %s", backend)
+                return
+            task = asyncio.create_task(
+                run_radio_backend(backend_cls(interval), stop_event=stop_event)
+            )
         try:
             await task
         finally:
