@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 @app.command()
-def scan(interval: int = 5, workers: int = 1):
+def scan(interval: int = 5, workers: int = 1, threads: int = 1, processes: int = 0):
     """Run BLE scanner."""
     load_plugins()
     mqtt_setup()
     try:
-        asyncio.run(run_scanner(interval, workers))
+        asyncio.run(run_scanner(interval, workers, threads, processes))
     except KeyboardInterrupt:
         logger.info("Scanner stopped by user")
 

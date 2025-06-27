@@ -15,6 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Setup script now launches sniff_my_ble.py and FastAPI server
 - requirements.txt now pins bleak>=0.22
 
+## [2.2.0] - 2024-06-01
+
+### Added
+- Vendor lookup module with caching
+- TLS support for MQTT
+- Thread/process options for scanner
+- CLI aggregator improvements
+- Unit tests for vendor lookup
+
+### Changed
+- Database now stored in `ble_scanner.db` with RSSI history
+- Updated README with new features
+
 ## [2.1.0] - 2024-01-21
 
 ### Added

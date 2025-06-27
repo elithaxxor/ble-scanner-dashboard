@@ -15,8 +15,8 @@ def _handle_stop(signame: str) -> None:
     stop_event.set()
 
 
-async def main(interval: int, workers: int) -> None:
-    scanner_task = asyncio.create_task(run_scanner(interval, workers))
+async def main(interval: int, workers: int, threads: int, processes: int) -> None:
+    scanner_task = asyncio.create_task(run_scanner(interval, workers, threads, processes))
     await stop_event.wait()
     scanner_task.cancel()
     await asyncio.gather(scanner_task, return_exceptions=True)
@@ -26,6 +26,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--interval", type=int, default=5)
     parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--processes", type=int, default=0)
     args = parser.parse_args()
 
     setup_logging()
@@ -37,4 +39,4 @@ if __name__ == "__main__":
         lambda: _handle_stop("keyboard") if sys.stdin.read(1).lower() == "q" else None,
     )
 
-    loop.run_until_complete(main(args.interval, args.workers))
+    loop.run_until_complete(main(args.interval, args.workers, args.threads, args.processes))

@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import asyncio
 import external_api
 from core import scanner
 
@@ -6,7 +7,7 @@ from core import scanner
 def test_vendor_for_mac_cache():
     scanner.VENDOR_CACHE.clear()
     scanner.VENDOR_CACHE["AA11BB"] = "TestVendor"
-    assert scanner.vendor_for_mac("AA:11:BB:00:00:00") == "TestVendor"
+    assert asyncio.run(scanner.vendor_for_mac("AA:11:BB:00:00:00")) == "TestVendor"
 
 
 @patch("external_api.requests.get")
