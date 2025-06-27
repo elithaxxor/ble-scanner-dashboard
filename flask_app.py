@@ -2,12 +2,12 @@
 
 import asyncio
 import signal
-import sqlite3
+import json
+from sqlmodel import Session, select
 from typing import List
 
 from flask import Flask, redirect, render_template_string, request, url_for
 
-from config import DB_PATH
 from core.utils import setup_logging
 
 setup_logging()
@@ -31,14 +31,22 @@ TEMPLATE = """
 
 @app.route("/")
 def index():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT mac, vendor, last_seen, json_extract(rssi_history, '$[-1].rssi') as rssi FROM devices ORDER BY last_seen DESC LIMIT 20"
-    )
-    devices = cur.fetchall()
-    conn.close()
+    from core.db import get_engine
+    from core.models import Device
+
+    engine = get_engine()
+    with Session(engine) as session:
+        stmt = select(Device).order_by(Device.last_seen.desc()).limit(20)
+        rows = session.exec(stmt).all()
+        devices = [
+            {
+                "mac": d.mac,
+                "vendor": d.vendor,
+                "last_seen": d.last_seen,
+                "rssi": (json.loads(d.rssi_history or "[]") or [{}])[-1].get("rssi"),
+            }
+            for d in rows
+        ]
     return render_template_string(TEMPLATE, devices=devices)
 
 
@@ -47,15 +55,21 @@ def history():
     page = int(request.args.get("page", "1"))
     per_page = 20
     offset = (page - 1) * per_page
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT mac, vendor, last_seen FROM devices ORDER BY last_seen DESC LIMIT ? OFFSET ?",
-        (per_page, offset),
-    )
-    rows = cur.fetchall()
-    conn.close()
+    from core.db import get_engine
+    from core.models import Device
+
+    engine = get_engine()
+    with Session(engine) as session:
+        stmt = (
+            select(Device.mac, Device.vendor, Device.last_seen)
+            .order_by(Device.last_seen.desc())
+            .offset(offset)
+            .limit(per_page)
+        )
+        rows = [
+            {"mac": d.mac, "vendor": d.vendor, "last_seen": d.last_seen}
+            for d in session.exec(stmt)
+        ]
     next_url = url_for("history", page=page + 1)
     prev_url = url_for("history", page=page - 1) if page > 1 else None
     html = (

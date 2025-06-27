@@ -1,55 +1,46 @@
-"""SQLite helper functions."""
+"""SQLite helper functions using SQLModel ORM."""
 
-import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Iterable, List, Optional
+
+from sqlmodel import SQLModel, create_engine, Session, select, delete, text
 
 from config import DB_PATH
+from .models import Device
+
+_engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
+
+
+def get_engine():
+    return _engine
 
 
 def init_db() -> None:
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS devices (
-            mac TEXT PRIMARY KEY,
-            vendor TEXT,
-            first_seen DATETIME,
-            last_seen DATETIME,
-            rssi_history TEXT
-        )
-        """
-    )
-    conn.commit()
-    conn.close()
+    """Create tables if they do not exist."""
+    SQLModel.metadata.create_all(_engine)
 
 
 def purge_old_entries(days: int = 30) -> None:
     """Remove outdated entries and shrink DB if oversized."""
-
     cutoff = datetime.now() - timedelta(days=days)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM devices WHERE last_seen < ?", (cutoff,))
+    with Session(_engine) as session:
+        session.exec(delete(Device).where(Device.last_seen < cutoff))
+        session.commit()
     if Path(DB_PATH).stat().st_size > 1 * 1024**3:
-        cursor.execute("DELETE FROM devices WHERE last_seen < ?", (cutoff,))
-        conn.execute("VACUUM")
-    conn.commit()
-    conn.close()
+        with _engine.connect() as conn:
+            conn.execute(text("VACUUM"))
 
 
-def get_devices(limit: int | None = None, offset: int = 0):
+def get_session() -> Session:
+    return Session(_engine)
+
+
+def get_devices(limit: Optional[int] = None, offset: int = 0) -> List[dict]:
     """Return devices as list of dicts."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    query = "SELECT * FROM devices ORDER BY last_seen DESC"
-    if limit is not None:
-        query += " LIMIT ? OFFSET ?"
-        cursor.execute(query, (limit, offset))
-    else:
-        cursor.execute(query)
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    with Session(_engine) as session:
+        stmt = select(Device).order_by(Device.last_seen.desc())
+        if limit is not None:
+            stmt = stmt.offset(offset).limit(limit)
+        rows = session.exec(stmt).all()
+        return [d.dict() for d in rows]

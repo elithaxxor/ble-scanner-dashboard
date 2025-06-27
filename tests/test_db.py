@@ -1,4 +1,4 @@
-import sqlite3
+from sqlmodel import Session, select, create_engine
 from datetime import datetime, timedelta
 
 import config
@@ -10,17 +10,15 @@ def test_purge_old_entries(tmp_path, monkeypatch):
     db = tmp_path / "test.db"
     monkeypatch.setattr(config, "DB_PATH", str(db))
     monkeypatch.setattr(core_db, "DB_PATH", str(db))
+    core_db._engine = create_engine(f"sqlite:///{db}")
     init_db()
-    conn = sqlite3.connect(db)
+    from core.models import Device
+    engine = core_db.get_engine()
     old = datetime.now() - timedelta(days=31)
-    conn.execute(
-        "INSERT INTO devices (mac, vendor, first_seen, last_seen, rssi_history) VALUES (?, ?, ?, ?, ?)",
-        ("AA", "V", old, old, "[]"),
-    )
-    conn.commit()
-    conn.close()
+    with Session(engine) as session:
+        session.add(Device(mac="AA", vendor="V", first_seen=old, last_seen=old, rssi_history="[]"))
+        session.commit()
     purge_old_entries()
-    conn = sqlite3.connect(db)
-    rows = conn.execute("SELECT * FROM devices").fetchall()
-    conn.close()
+    with Session(engine) as session:
+        rows = session.exec(select(Device)).all()
     assert rows == []

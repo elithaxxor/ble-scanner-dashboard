@@ -14,3 +14,5 @@ Shapely
 geopy
 pytest-asyncio
 paho-mqtt
+SQLModel
+alembic

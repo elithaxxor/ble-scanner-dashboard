@@ -1,5 +1,6 @@
 import asyncio
-import sqlite3
+from sqlmodel import Session, create_engine
+from datetime import datetime
 
 import pytest
 
@@ -12,13 +13,20 @@ import flask_app
 from flask_app import app
 
 
-def setup_db(path):
-    conn = sqlite3.connect(path)
-    conn.execute(
-        "INSERT INTO devices (mac, vendor, first_seen, last_seen, rssi_history) VALUES ('AA', 'Vendor', '2020-01-01', '2020-01-01', '[]')"
-    )
-    conn.commit()
-    conn.close()
+def setup_db(engine):
+    from core.models import Device
+
+    with Session(engine) as session:
+        session.add(
+            Device(
+                mac="AA",
+                vendor="Vendor",
+                first_seen=datetime(2020, 1, 1),
+                last_seen=datetime(2020, 1, 1),
+                rssi_history="[]",
+            )
+        )
+        session.commit()
 
 
 def test_flask_endpoints(tmp_path, monkeypatch):
@@ -26,8 +34,9 @@ def test_flask_endpoints(tmp_path, monkeypatch):
     db = tmp_path / "test.db"
     monkeypatch.setattr(config, "DB_PATH", str(db))
     monkeypatch.setattr(core_db, "DB_PATH", str(db))
+    core_db._engine = create_engine(f"sqlite:///{db}")
     init_db()
-    setup_db(db)
+    setup_db(core_db._engine)
     app.testing = True
     flask_app.STOP_EVENT = asyncio.Event()
     with app.test_client() as client:
