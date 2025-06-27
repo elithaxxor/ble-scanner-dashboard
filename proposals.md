@@ -12,3 +12,5 @@ The following ideas could further improve the BLE Scanner Suite:
 - **Encrypted MQTT support** – secure message transport with TLS.
 - **HID injection support** – replay captured keystrokes over BLE using the new active toolkit.
 - **Protocol radar graphs** – visualise protocol usage in real time within the dashboard.
+- **Pcap analytics** – integrate pyshark-based decoders to replay traffic and
+  generate statistics about packet types and signal strength trends.
