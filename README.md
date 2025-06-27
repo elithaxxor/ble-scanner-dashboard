@@ -115,6 +115,7 @@ A modern Bluetooth Low Energy (BLE) scanner that monitors nearby devices and pro
 - 📥 CLI command to install community plugins via apt/brew
 - 📡 MQTT broadcasting alongside WebSocket updates
 - 🐳 Headless container mode for lightweight deployments
+- 📦 Docker packaging for easy deployment
 - 🛠️ Web-based configuration page
 - 📝 Rotating log files with archival
 - 🧩 Vendor prefix lookup for device manufacturers
@@ -146,10 +147,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```bash
 pip install -r requirements.txt
 ```
-
-4. Initialize the database:
+4. Initialize the database by running the scanner once:
 ```bash
-python create_db.py
+python sniff_my_ble.py --interval 5 --workers 1
 ```
 
 5. Configure environment variables:
@@ -162,7 +162,7 @@ cp .env.example .env
 
 1. Start the BLE scanner:
 ```bash
-python app.py
+python sniff_my_ble.py
 ```
 This will begin scanning for nearby Bluetooth devices and logging their presence to the database.
 
@@ -178,7 +178,7 @@ Sample output:
 
 2. In a separate terminal, start the web dashboard:
 ```bash
-python web_app.py
+python -m api
 ```
 The dashboard will be available at http://localhost:8000
 
@@ -306,14 +306,14 @@ HUMAN_RSSI_THRESHOLD=-70  # Adjust based on your environment
 
 4. **Database Errors**
    - If database errors occur, try reinitializing:
-     ```bash
-     python create_db.py
+```bash
+     python sniff_my_ble.py --interval 5 --workers 1
      ```
 
 ### Logs
 
 - Check `ble_scanner.log` for detailed error messages and debugging information
-- Web application logs will appear in the terminal running `web_app.py`
+- Web application logs will appear in the terminal running `python -m api`
 
 ## Testing
 
@@ -360,11 +360,10 @@ python test_ble_scanner.py
 ### Project Structure
 ```
 ble-scanner/
-├── app.py              # Main BLE scanning logic
-├── web_app.py          # Web dashboard application
+├── sniff_my_ble.py              # Main BLE scanning logic
+├── api/app.py          # Web dashboard application
 ├── config.py           # Configuration settings
 ├── notifications.py    # Notification system
-├── create_db.py       # Database initialization
 ├── test_suite.py      # Comprehensive test suite
 ├── test_*.py          # Individual test modules
 ├── requirements.txt    # Python dependencies

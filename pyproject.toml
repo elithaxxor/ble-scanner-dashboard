@@ -8,6 +8,9 @@ version = "0.1.0"
 dependencies = [
     "fastapi>=0.111,<0.112",
     "uvicorn[standard]>=0.29,<0.30",
+    "bleak>=0.22",
+    "requests",
+    "python-dotenv",
     "PyQt6",
     "typer",
     "paho-mqtt",

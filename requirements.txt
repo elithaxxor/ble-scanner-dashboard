@@ -2,6 +2,7 @@ fastapi>=0.111,<0.112
 uvicorn[standard]>=0.29,<0.30
 PyQt6
 typer
+bleak>=0.22
 requests
 python-dotenv
 scikit-learn
