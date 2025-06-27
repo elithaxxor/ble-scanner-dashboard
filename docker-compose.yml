@@ -1,0 +1,9 @@
+version: '3.9'
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app
+    command: python container_mode.py
+    ports:
+      - "8000:8000"

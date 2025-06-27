@@ -7,16 +7,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
+from bleak import BleakScanner
 from mac_vendor_lookup import MacLookup
 
-from bleak import BleakScanner
-
 from config import DB_PATH
-from plugins import dispatch_event
-from mqtt_client import publish_event
-from notifications import send_all_notifications
 from core.db import init_db, purge_old_entries
 from core.utils import setup_logging
+from mqtt_client import publish_event
+from notifications import send_all_notifications
+from plugins import dispatch_event
 from vendor_lookup import load_vendor_data, lookup_vendor
 
 setup_logging()
@@ -36,7 +35,9 @@ def init_executors(threads: int, processes: int) -> None:
     """Initialise thread and process pools."""
     global THREAD_EXECUTOR, PROCESS_EXECUTOR
     THREAD_EXECUTOR = ThreadPoolExecutor(max_workers=threads)
-    PROCESS_EXECUTOR = ProcessPoolExecutor(max_workers=processes) if processes > 0 else None
+    PROCESS_EXECUTOR = (
+        ProcessPoolExecutor(max_workers=processes) if processes > 0 else None
+    )
 
 
 def broadcast_event(event: dict) -> None:
@@ -105,35 +106,35 @@ def parse_eddystone(data: bytes) -> Optional[Dict[str, str]]:
     return None
 
 
-def _update_device_sync(address: str, name: str, rssi: int, vendor: Optional[str]) -> None:
+def _update_device_sync(
+    address: str, _name: str, rssi: int, vendor: Optional[str]
+) -> None:
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         now = datetime.now()
         cursor.execute(
-            "SELECT frequency_count, rssi_history FROM devices WHERE mac_address = ?",
+            "SELECT rssi_history FROM devices WHERE mac = ?",
             (address,),
         )
         res = cursor.fetchone()
         if res:
-            new_count = res[0] + 1
-            history = json.loads(res[1] or "[]")
+            history = json.loads(res[0] or "[]")
             history.append({"t": now.isoformat(), "rssi": rssi})
             cursor.execute(
-                """
-                UPDATE devices SET last_seen=?, frequency_count=?, rssi=?, device_name=?, rssi_history=?
-                WHERE mac_address=?
-                """,
-                (now, new_count, rssi, name, json.dumps(history), address),
+                "UPDATE devices SET last_seen=?, vendor=?, rssi_history=? WHERE mac=?",
+                (now, vendor, json.dumps(history), address),
             )
         else:
             cursor.execute(
-                """
-                INSERT INTO devices (mac_address, device_name, first_seen, last_seen,
-                                    frequency_count, rssi, manufacturer, rssi_history)
-                VALUES (?, ?, ?, ?, 1, ?, ?, ?)
-                """,
-                (address, name, now, now, rssi, vendor, json.dumps([{"t": now.isoformat(), "rssi": rssi}])),
+                "INSERT INTO devices (mac, vendor, first_seen, last_seen, rssi_history) VALUES (?, ?, ?, ?, ?)",
+                (
+                    address,
+                    vendor,
+                    now,
+                    now,
+                    json.dumps([{"t": now.isoformat(), "rssi": rssi}]),
+                ),
             )
         conn.commit()
     except Exception as exc:
@@ -146,11 +147,29 @@ def _update_device_sync(address: str, name: str, rssi: int, vendor: Optional[str
 async def update_device(address: str, name: str, rssi: int) -> None:
     vendor = await vendor_for_mac(address)
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(THREAD_EXECUTOR, _update_device_sync, address, name, rssi, vendor)
+    await loop.run_in_executor(
+        THREAD_EXECUTOR,
+        _update_device_sync,
+        address,
+        name,
+        rssi,
+        vendor,
+    )
 
 
-async def scan_once() -> None:
-    devices = await BleakScanner.discover()
+async def _discover_devices(threaded: bool) -> list:
+    if threaded:
+        loop = asyncio.get_running_loop()
+
+        def _run() -> list:
+            return asyncio.run(BleakScanner.discover())
+
+        return await loop.run_in_executor(THREAD_EXECUTOR, _run)
+    return await BleakScanner.discover()
+
+
+async def scan_once(threaded_scan: bool = False) -> None:
+    devices = await _discover_devices(threaded_scan)
     for dev in devices:
         if dev.address and dev.rssi is not None:
             await update_device(dev.address, dev.name or "Unknown", dev.rssi)
@@ -174,22 +193,40 @@ async def scan_once() -> None:
             )
 
 
-async def _worker(interval: int) -> None:
-    while True:
-        await scan_once()
-        await asyncio.sleep(interval)
+async def _worker(
+    interval: int, stop_event: asyncio.Event, threaded_scan: bool
+) -> None:
+    while not stop_event.is_set():
+        await scan_once(threaded_scan)
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval)
+        except asyncio.TimeoutError:
+            pass
 
 
-async def run_scanner(interval: int = 5, workers: int = 1, threads: int = 1, processes: int = 0) -> None:
+async def run_scanner(
+    interval: int = 5,
+    workers: int = 1,
+    threads: int = 1,
+    processes: int = 0,
+    stop_event: asyncio.Event | None = None,
+    threaded_scan: bool = False,
+) -> None:
     load_vendor_cache()
     init_db()
     purge_old_entries()
     init_executors(threads, processes)
-    tasks = [asyncio.create_task(_worker(interval)) for _ in range(workers)]
+    if stop_event is None:
+        stop_event = asyncio.Event()
+    tasks = [
+        asyncio.create_task(_worker(interval, stop_event, threaded_scan))
+        for _ in range(workers)
+    ]
     try:
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
         for t in tasks:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+    finally:
         logger.info("Scanner stopped")

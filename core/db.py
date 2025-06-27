@@ -1,6 +1,9 @@
+"""SQLite helper functions."""
+
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+
 from config import DB_PATH
 
 
@@ -10,13 +13,10 @@ def init_db() -> None:
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS devices (
-            mac_address TEXT PRIMARY KEY,
-            device_name TEXT,
+            mac TEXT PRIMARY KEY,
+            vendor TEXT,
             first_seen DATETIME,
             last_seen DATETIME,
-            frequency_count INTEGER,
-            rssi INTEGER,
-            manufacturer TEXT,
             rssi_history TEXT
         )
         """
@@ -26,12 +26,15 @@ def init_db() -> None:
 
 
 def purge_old_entries(days: int = 30) -> None:
+    """Remove outdated entries and shrink DB if oversized."""
+
     cutoff = datetime.now() - timedelta(days=days)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM devices WHERE last_seen < ?", (cutoff,))
-    if Path(DB_PATH).stat().st_size > 10 * 1024 ** 3:
+    if Path(DB_PATH).stat().st_size > 1 * 1024**3:
         cursor.execute("DELETE FROM devices WHERE last_seen < ?", (cutoff,))
+        conn.execute("VACUUM")
     conn.commit()
     conn.close()
 
