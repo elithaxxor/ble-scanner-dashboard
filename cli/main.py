@@ -6,6 +6,7 @@ from typing import List
 
 import typer
 
+from active.hid_replay import replay as hid_replay
 from core import aggregator
 from core.exporter import export_data
 from core.scanner import EVENT_BUS, run_scanner
@@ -42,7 +43,7 @@ def scan(
                 processes,
                 stop_event=stop_event,
                 threaded_scan=threaded_scan,
-            )
+            ),
         )
         try:
             await task
@@ -93,7 +94,7 @@ def plugin_install(package: str, manager: str = "apt"):
 
 @app.command()
 def aggregate(
-    endpoints: List[str] = typer.Option([], "--endpoint", help="Remote dashboard URLs")
+    endpoints: List[str] = typer.Option([], "--endpoint", help="Remote dashboard URLs"),
 ):
     """Aggregate device results from remote dashboards."""
     if not endpoints:
@@ -115,6 +116,16 @@ def export(
     init_db()
     export_data(fmt, output, limit)
     typer.echo(f"Exported to {output}")
+
+
+@app.command()
+def hid_replay(address: str, char_uuid: str, packet_file: Path):
+    """Replay HID notifications from PACKET_FILE."""
+
+    async def _run() -> None:
+        await hid_replay(address, char_uuid, packet_file)
+
+    asyncio.run(_run())
 
 
 if __name__ == "__main__":
