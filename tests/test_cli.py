@@ -14,3 +14,11 @@ def test_aggregate_command():
         assert result.exit_code == 0
         assert "AA" in result.output
         mock_agg.assert_called_once_with(["url1", "url2"])
+
+
+def test_export_command(tmp_path):
+    runner = CliRunner()
+    out = tmp_path / "data.json"
+    result = runner.invoke(app, ["export", "--format", "json", str(out), "--limit", "0"])
+    assert result.exit_code == 0
+    assert out.exists()

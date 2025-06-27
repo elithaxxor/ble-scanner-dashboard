@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
 from typing import List
 
 import typer
@@ -10,6 +11,7 @@ from mqtt_client import setup as mqtt_setup
 from core.utils import setup_logging
 from external_api import shodan_lookup, wigle_lookup
 from core import aggregator
+from core.exporter import export_data
 
 app = typer.Typer(help="BLE Scanner Suite CLI")
 
@@ -74,6 +76,20 @@ def aggregate(
         raise typer.Exit(code=1)
     results = aggregator.aggregate(endpoints)
     typer.echo(json.dumps(results, indent=2))
+
+
+@app.command()
+def export(
+    fmt: str = typer.Option("json", "--format", "-f", help="json, csv, sqlite"),
+    output: Path = typer.Argument(Path("export.out")),
+    limit: int = 100,
+):
+    """Export the local database."""
+    from core.db import init_db
+
+    init_db()
+    export_data(fmt, output, limit)
+    typer.echo(f"Exported to {output}")
 
 
 if __name__ == "__main__":
