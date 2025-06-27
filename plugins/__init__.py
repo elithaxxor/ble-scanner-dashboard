@@ -37,4 +37,3 @@ def dispatch_event(event: dict) -> None:
             asyncio.create_task(handler(event))
         except Exception as exc:
             logger.error("Plugin handler error: %s", exc)
-

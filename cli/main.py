@@ -1,13 +1,14 @@
 import asyncio
-import typer
 import logging
-from core.scanner import run_scanner, EVENT_BUS
+import typer
+from core.scanner import EVENT_BUS, run_scanner
 from plugins import load_plugins
 from mqtt_client import setup as mqtt_setup
+from core.utils import setup_logging
 
 app = typer.Typer(help="BLE Scanner Suite CLI")
 
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +17,10 @@ def scan(interval: int = 5):
     """Run BLE scanner."""
     load_plugins()
     mqtt_setup()
-    asyncio.run(run_scanner(interval))
+    try:
+        asyncio.run(run_scanner(interval))
+    except KeyboardInterrupt:
+        logger.info("Scanner stopped by user")
 
 
 @app.command()
@@ -33,4 +37,3 @@ def listen():
 
 if __name__ == "__main__":
     app()
-

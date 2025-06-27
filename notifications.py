@@ -8,16 +8,11 @@ from config import (
     WHATSAPP_AUTH_TOKEN,
     WHATSAPP_FROM,
     WHATSAPP_TO,
-    LOG_FILE,
-    LOG_LEVEL,
 )
+from core.utils import setup_logging
 
 # Set up logging
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=getattr(logging, LOG_LEVEL),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 

@@ -7,8 +7,10 @@ from api.app import app
 from core.scanner import run_scanner
 from plugins import load_plugins
 from mqtt_client import setup as mqtt_setup
+from core.utils import setup_logging
 import config
 
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -28,4 +30,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

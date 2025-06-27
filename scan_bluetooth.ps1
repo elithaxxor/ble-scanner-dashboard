@@ -1,0 +1,17 @@
+param(
+    [int]$Interval = 5,
+    [switch]$Continuous
+)
+
+Write-Host "`u{1F50D} Starting BLE scan..." -ForegroundColor Cyan
+
+do {
+    python sniff_my_ble.py --interval $Interval
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "`u{2705} Scan complete" -ForegroundColor Green
+    } else {
+        Write-Host "`u{274C} Scan error" -ForegroundColor Red
+    }
+    if (-not $Continuous) { break }
+    Start-Sleep -Seconds $Interval
+} while ($true)
