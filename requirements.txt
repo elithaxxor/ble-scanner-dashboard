@@ -9,6 +9,7 @@ scikit-learn
 pandas
 numpy
 mac-vendor-lookup
+Flask
 Shapely
 geopy
 pytest-asyncio
