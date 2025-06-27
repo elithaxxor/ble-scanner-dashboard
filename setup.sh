@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e
 
 # Create virtual environment if it doesn't exist
@@ -7,17 +6,13 @@ if [ ! -d ".venv" ]; then
   python3 -m venv .venv
 fi
 
-# Activate the virtual environment
 source .venv/bin/activate
-
-# Upgrade pip
 pip install --upgrade pip
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Initialize the database (run once, safe to repeat)
-python main.py
+# Launch the scanner in the background (creates DB on first run)
+python sniff_my_ble.py --interval 5 --workers 1 &
 
-# Start the web dashboard
-python web_app.py
+# Start the FastAPI dashboard
+python -m api
+
