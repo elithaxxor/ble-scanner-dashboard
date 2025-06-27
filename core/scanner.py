@@ -230,3 +230,36 @@ async def run_scanner(
         await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         logger.info("Scanner stopped")
+
+
+async def run_radio_backend(
+    backend: "ble_scanner.plugins.RadioBackend",
+    stop_event: asyncio.Event | None = None,
+) -> None:
+    """Run scanner using a radio backend."""
+
+    load_vendor_cache()
+    init_db()
+    purge_old_entries()
+    if stop_event is None:
+        stop_event = asyncio.Event()
+
+    async def _consume() -> None:
+        async for packet in backend.scan():
+            if stop_event.is_set():
+                break
+            if packet.address and packet.rssi is not None:
+                await update_device(packet.address, packet.address, packet.rssi)
+                event = {
+                    "address": packet.address,
+                    "rssi": packet.rssi,
+                    "timestamp": packet.timestamp.isoformat(),
+                }
+                broadcast_event(event)
+
+    task = asyncio.create_task(_consume())
+    try:
+        await stop_event.wait()
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
