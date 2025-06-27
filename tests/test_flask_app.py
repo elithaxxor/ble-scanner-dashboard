@@ -6,8 +6,10 @@ import pytest
 pytest.importorskip("flask")
 
 import config
+from core import db as core_db
 from core.db import init_db
-from flask_app import STOP_EVENT, app
+import flask_app
+from flask_app import app
 
 
 def setup_db(path):
@@ -23,10 +25,11 @@ def test_flask_endpoints(tmp_path, monkeypatch):
     pytest.importorskip("flask")
     db = tmp_path / "test.db"
     monkeypatch.setattr(config, "DB_PATH", str(db))
+    monkeypatch.setattr(core_db, "DB_PATH", str(db))
     init_db()
     setup_db(db)
     app.testing = True
-    STOP_EVENT = asyncio.Event()
+    flask_app.STOP_EVENT = asyncio.Event()
     with app.test_client() as client:
         r = client.get("/")
         assert r.status_code == 200
