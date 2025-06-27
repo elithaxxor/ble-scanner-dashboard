@@ -60,6 +60,9 @@ class RadioBackend(ABC):
 
 _MODULES: Dict[str, str] = {
     "bluez": "ble_scanner.plugins.bluez",
+    "ubertooth": "ble_scanner.plugins.ubertooth",
+    "nrf": "ble_scanner.plugins.nrf",
+    "btlejack": "ble_scanner.plugins.btlejack",
 }
 
 _BACKENDS: Dict[str, Type[RadioBackend]] = {}
@@ -92,8 +95,10 @@ def get_backend(name: str) -> Optional[Type[RadioBackend]]:
 
 
 
+
 from .bluez import Backend as BlueZBackend
 from .ubertooth import Backend as UbertoothBackend
 from .nrf import Backend as NrfBackend
 from .btlejack import Backend as BtlejackBackend
+
 
