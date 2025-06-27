@@ -1,5 +1,99 @@
 # BLE Scanner Dashboard
 
+# BLE‑Scanner Suite v3 β  
+_A unified BLE scanner, sniffer & simulator – Web, CLI & PyQt_
+
+![CI](https://img.shields.io/github/actions/workflow/status/elithaxxor/ble-scanner-dashboard/ci.yml)
+![Docker](https://img.shields.io/badge/docker-ready-blue)
+![License](https://img.shields.io/github/license/elithaxxor/ble-scanner-dashboard)
+
+---
+
+graph LR
+    subgraph Front‑Ends
+        A[Typer CLI] --> E(Event Bus)
+        B[PyQt 6 GUI] --> E
+        C[Tailwind Web] -->|WebSocket| E
+    end
+    E --> D[(SQLite)]
+    E --> S[Scanner]
+    E --> N[Sniffer]
+    E --> M[Simulator]
+
+--
+---
+
+## 5 – Codex bootstrap prompt (`tooling/codex_prompt.txt`)
+
+```text
+You are ChatGPT‑Codex assigned to refactor “ble‑scanner‑dashboard”.
+
+TASKS
+ 1. Move scanner/sniffer/simulator code into /core/ preserving git history.
+ 2. Generate FastAPI routers in /api/ and Typer CLI in /cli/.
+ 3. Expose Qt widgets under qt_frontend/ and wire to asyncio event bus.
+ 4. Merge tests from ble‑scanner_2 and BLE‑Sniffer into /tests.
+ 5. Update pyproject.toml & requirements.txt; pin Bleak >=0.22.
+ 6. Ensure ‘ruff’, ‘black’, ‘pytest -q’ all pass.
+
+CONSTRAINTS
+ • No breaking changes to public CLI flags.
+ • All subprocess calls must have timeout ≤30 s.
+ • Use logging not print.
+ • Code must run on macOS 13+ and Ubuntu 22.04 LTS.
+
+OUTPUT
+Return a single git patch generated with `git format-patch -1`.
+---
+
+## ✨ Highlights
+* **Triple front‑end**: FastAPI + Tailwind web UI, Typer CLI, PyQt 6 desktop  [oai_citation:9‡github.com](https://github.com/elithaxxor/ble-scanner-dashboard) [oai_citation:10‡github.com](https://github.com/elithaxxor/Bluetooth-Maurader_GUI)  
+* **Async core** powered by **Bleak** (macOS/Linux) with BlueZ fall‑back  [oai_citation:11‡bleak.readthedocs.io](https://bleak.readthedocs.io/?utm_source=chatgpt.com) [oai_citation:12‡kali.org](https://www.kali.org/tools/bluez/?utm_source=chatgpt.com)  
+* **Advertising & GATT simulator** ported from Bluetooth‑Marauder  [oai_citation:13‡github.com](https://github.com/elithaxxor/Bluetooth-Maurader_GUI)  
+* **Packet sniffer + vendor DB** from BLE‑Sniffer  [oai_citation:14‡github.com](https://github.com/elithaxxor/BLE-Sniffer)  
+* **Live WebSocket feeds** to web dashboard and Qt graphs  
+* **Multi‑channel alerts** (Discord, Telegram, WhatsApp)  
+* **SQLite persistence**, auto‑pruning older logs  
+* **Cross‑platform packaging** via PyInstaller/AppImage/`.app`  [oai_citation:15‡pyinstaller.org](https://www.pyinstaller.org/?utm_source=chatgpt.com) [oai_citation:16‡pyinstaller.org](https://pyinstaller.org/en/v4.1/usage.html?utm_source=chatgpt.com)  
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/elithaxxor/ble-scanner-dashboard.git
+cd ble-scanner-dashboard
+./setup.sh              # auto‑detects macOS vs Linux
+ble-scan                # Typer CLI entry point
+ble-gui                 # PyQt desktop
+ble-web                 # FastAPI dashboard  (http://localhost:8000)
+
+
+ble‑scanner‑dashboard/
+│
+├── core/                       # shared, pure‑Python logic
+│   ├── scanner.py              # Bleak‑based discovery (+ BlueZ fallback)
+│   ├── sniffer.py              # packet capture & vendor lookup
+│   ├── simulator.py            # advertising/GATT simulator
+│   └── db.py                   # SQLite helper (peewee ORM)
+│
+├── api/                        # FastAPI + WebSockets
+│   ├── routes.py               # REST endpoints
+│   └── websocket.py            # live push to dashboard & Qt
+│
+├── qt_frontend/                # PyQt6 desktop GUI
+│   ├── main_window.py          # device table + RSSI graphs
+│   └── wizard.py               # interactive prompt pages
+│
+├── cli/                        # rich‑text CLI (Typer)
+│   └── main.py                 # wraps scanner/simulator/sniffer
+│
+├── web/                        # Tailwind/HTMX dashboard
+│   └── templates/
+│
+└── tests/                      # merged pytest suite
+
+
 A modern Bluetooth Low Energy (BLE) scanner that monitors nearby devices and provides a real-time web dashboard for visualization. Perfect for tracking device frequency and movement patterns near a specific location.
 
 ## Features
