@@ -1,11 +1,15 @@
 import asyncio
+import json
 import logging
+from typing import List
+
 import typer
 from core.scanner import EVENT_BUS, run_scanner
 from plugins import load_plugins, install_plugin
 from mqtt_client import setup as mqtt_setup
 from core.utils import setup_logging
 from external_api import shodan_lookup, wigle_lookup
+from core import aggregator
 
 app = typer.Typer(help="BLE Scanner Suite CLI")
 
@@ -58,6 +62,18 @@ def plugin_install(package: str, manager: str = "apt"):
         typer.echo("Installed successfully")
     else:
         typer.echo("Installation failed")
+
+
+@app.command()
+def aggregate(
+    endpoints: List[str] = typer.Option([], "--endpoint", help="Remote dashboard URLs")
+):
+    """Aggregate device results from remote dashboards."""
+    if not endpoints:
+        typer.echo("No endpoints provided", err=True)
+        raise typer.Exit(code=1)
+    results = aggregator.aggregate(endpoints)
+    typer.echo(json.dumps(results, indent=2))
 
 
 if __name__ == "__main__":
