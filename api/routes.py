@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import config
 from external_api import shodan_lookup, wigle_lookup
+from core.db import get_devices
 
 router = APIRouter()
 templates = Jinja2Templates(directory="web/templates")
@@ -44,3 +45,8 @@ async def shodan(query: str):
 @router.get("/wigle")
 async def wigle(ssid: str):
     return JSONResponse(wigle_lookup(ssid))
+
+
+@router.get("/export")
+async def export(limit: int = 100):
+    return JSONResponse(get_devices(limit))

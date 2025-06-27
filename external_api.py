@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "")
 WIGLE_API_NAME = os.getenv("WIGLE_API_NAME", "")
 WIGLE_API_TOKEN = os.getenv("WIGLE_API_TOKEN", "")
+CENSYS_API_ID = os.getenv("CENSYS_API_ID", "")
+CENSYS_API_SECRET = os.getenv("CENSYS_API_SECRET", "")
 
 
 def shodan_lookup(query: str) -> Dict[str, Any]:
@@ -44,4 +46,25 @@ def wigle_lookup(ssid: str) -> Dict[str, Any]:
         return resp.json()
     except Exception as exc:  # pragma: no cover - network errors
         logger.error("Wigle lookup failed: %s", exc)
+        return {}
+
+
+def censys_lookup(query: str) -> Dict[str, Any]:
+    """Query the Censys search API."""
+    if not (CENSYS_API_ID and CENSYS_API_SECRET):
+        logger.warning("Censys credentials not configured")
+        return {}
+    url = "https://search.censys.io/api/v2/hosts/search"
+    params = {"q": query}
+    try:
+        resp = requests.get(
+            url,
+            params=params,
+            auth=(CENSYS_API_ID, CENSYS_API_SECRET),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:  # pragma: no cover - network errors
+        logger.error("Censys lookup failed: %s", exc)
         return {}

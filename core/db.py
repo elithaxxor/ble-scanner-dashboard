@@ -30,3 +30,19 @@ def purge_old_entries(days: int = 30) -> None:
     cursor.execute("DELETE FROM Devices WHERE last_seen < ?", (cutoff,))
     conn.commit()
     conn.close()
+
+
+def get_devices(limit: int | None = None):
+    """Return devices as list of dicts."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    query = "SELECT * FROM Devices ORDER BY last_seen DESC"
+    if limit:
+        query += " LIMIT ?"
+        cursor.execute(query, (limit,))
+    else:
+        cursor.execute(query)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

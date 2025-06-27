@@ -4,6 +4,8 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Callable, List
+import subprocess
+from shutil import which
 
 logger = logging.getLogger(__name__)
 PLUGINS_PATH = Path(__file__).parent
@@ -37,3 +39,25 @@ def dispatch_event(event: dict) -> None:
             asyncio.create_task(handler(event))
         except Exception as exc:
             logger.error("Plugin handler error: %s", exc)
+
+
+def install_plugin(package: str, manager: str = "apt") -> bool:
+    """Install a system plugin using apt or brew."""
+    if manager not in {"apt", "brew"}:
+        logger.error("Unsupported manager %s", manager)
+        return False
+    if which(manager) is None:
+        logger.error("%s not found", manager)
+        return False
+    cmd = (
+        [manager, "install", "-y", package]
+        if manager == "apt"
+        else ["brew", "install", package]
+    )
+    try:
+        subprocess.run(cmd, check=True, timeout=30)
+        logger.info("Installed %s via %s", package, manager)
+        return True
+    except Exception as exc:  # pragma: no cover - runtime errors
+        logger.error("Plugin install failed: %s", exc)
+        return False
