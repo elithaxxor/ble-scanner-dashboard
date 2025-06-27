@@ -12,11 +12,13 @@ DB_PATH = os.path.join(BASE_DIR, "bluetooth_devices.db")
 
 # Bluetooth scanning configuration
 SCAN_INTERVAL = 5  # seconds between each scan
-BLUETOOTH_INTERFACE = 'hci0'  # default Bluetooth interface
-HUMAN_RSSI_THRESHOLD = int(os.getenv("HUMAN_RSSI_THRESHOLD", "-70"))  # RSSI threshold for human presence
+BLUETOOTH_INTERFACE = "hci0"  # default Bluetooth interface
+HUMAN_RSSI_THRESHOLD = int(
+    os.getenv("HUMAN_RSSI_THRESHOLD", "-70")
+)  # RSSI threshold for human presence
 
 # Web interface configuration
-WEB_HOST = '0.0.0.0'
+WEB_HOST = "0.0.0.0"
 WEB_PORT = 4128
 DEBUG_MODE = True
 
