@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-6">
+    <h1 class="text-2xl font-bold mb-4">Configuration</h1>
+    <form method="post" class="space-y-4">
+        <div>
+            <label class="block">Scan Interval (seconds)</label>
+            <input name="scan_interval" type="number" value="{{ config.SCAN_INTERVAL }}" class="border p-2 w-48">
+        </div>
+        <div>
+            <label class="block">Discord Webhook</label>
+            <input name="discord" type="text" value="{{ config.DISCORD_WEBHOOK_URL }}" class="border p-2 w-full">
+        </div>
+        <div>
+            <label class="block">Telegram Bot Token</label>
+            <input name="telegram_token" type="text" value="{{ config.TELEGRAM_BOT_TOKEN }}" class="border p-2 w-full">
+        </div>
+        <div>
+            <label class="block">Telegram Chat ID</label>
+            <input name="telegram_chat" type="text" value="{{ config.TELEGRAM_CHAT_ID }}" class="border p-2 w-full">
+        </div>
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Save</button>
+    </form>
+</body>
+</html>
+

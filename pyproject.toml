@@ -10,6 +10,7 @@ dependencies = [
     "uvicorn[standard]>=0.29,<0.30",
     "PyQt6",
     "typer",
+    "paho-mqtt",
 ]
 
 [project.scripts]

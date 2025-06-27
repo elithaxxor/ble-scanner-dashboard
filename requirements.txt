@@ -11,3 +11,4 @@ mac-vendor-lookup
 Shapely
 geopy
 pytest-asyncio
+paho-mqtt

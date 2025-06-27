@@ -111,6 +111,10 @@ A modern Bluetooth Low Energy (BLE) scanner that monitors nearby devices and pro
   - Discord integration
   - Telegram bot notifications
   - WhatsApp message alerts
+- 🔌 Runtime plugin system for custom analyzers/exporters
+- 📡 MQTT broadcasting alongside WebSocket updates
+- 🐳 Headless container mode for lightweight deployments
+- 🛠️ Web-based configuration page
 
 ## Requirements
 
@@ -419,3 +423,4 @@ Contributions are welcome! Please follow these steps:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
