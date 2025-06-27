@@ -112,12 +112,14 @@ A modern Bluetooth Low Energy (BLE) scanner that monitors nearby devices and pro
   - Telegram bot notifications
   - WhatsApp message alerts
 - 🔌 Runtime plugin system for custom analyzers/exporters
+- 📥 CLI command to install community plugins via apt/brew
 - 📡 MQTT broadcasting alongside WebSocket updates
 - 🐳 Headless container mode for lightweight deployments
 - 🛠️ Web-based configuration page
 - 📝 Rotating log files with archival
 - 🧩 Vendor prefix lookup for device manufacturers
 - ⚡ Concurrent scanning workers via asyncio
+- 🗂️ Centralized result dashboard with /export API
 - 🕹️ `sniff_my_ble.py` script with hotkey shutdown
 
 ## Requirements

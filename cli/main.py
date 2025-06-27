@@ -2,7 +2,7 @@ import asyncio
 import logging
 import typer
 from core.scanner import EVENT_BUS, run_scanner
-from plugins import load_plugins
+from plugins import load_plugins, install_plugin
 from mqtt_client import setup as mqtt_setup
 from core.utils import setup_logging
 from external_api import shodan_lookup, wigle_lookup
@@ -48,6 +48,16 @@ def wigle(ssid: str):
     """Query Wigle for a Wi-Fi SSID."""
     res = wigle_lookup(ssid)
     typer.echo(res)
+
+
+@app.command()
+def plugin_install(package: str, manager: str = "apt"):
+    """Install a system plugin via apt or brew."""
+    success = install_plugin(package, manager)
+    if success:
+        typer.echo("Installed successfully")
+    else:
+        typer.echo("Installation failed")
 
 
 if __name__ == "__main__":
