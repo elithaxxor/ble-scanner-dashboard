@@ -10,3 +10,5 @@ The following ideas could further improve the BLE Scanner Suite:
 - **Aggregator CLI** – fetch and merge device lists from remote dashboards.
 - **Graph relationships** – visualise interactions between nearby devices.
 - **Encrypted MQTT support** – secure message transport with TLS.
+- **HID injection support** – replay captured keystrokes over BLE using the new active toolkit.
+- **Protocol radar graphs** – visualise protocol usage in real time within the dashboard.
