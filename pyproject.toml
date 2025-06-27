@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ble-scanner-suite"
+version = "0.1.0"
+dependencies = [
+    "fastapi>=0.111,<0.112",
+    "uvicorn[standard]>=0.29,<0.30",
+    "PyQt6",
+    "typer",
+]
+
+[project.scripts]
+ble-scan = "cli.main:app"
+ble-gui = "qt_frontend.__main__:run"
+ble-web = "api.__main__:main"

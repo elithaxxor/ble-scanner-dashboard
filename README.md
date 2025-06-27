@@ -2,6 +2,8 @@
 
 # BLE‑Scanner Suite v3 β  
 _A unified BLE scanner, sniffer & simulator – Web, CLI & PyQt_
+**Now with unified event bus and multiple entry points (ble-scan, ble-gui, ble-web).**
+
 
 ![CI](https://img.shields.io/github/actions/workflow/status/elithaxxor/ble-scanner-dashboard/ci.yml)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)

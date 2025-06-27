@@ -1,22 +1,13 @@
-# Core dependencies
-Flask==2.2.2
-Werkzeug<3
-bleak==0.20.2
-python-dotenv==1.0.0
-requests==2.31.0
-
-# WebSocket support
-Flask-SocketIO==5.3.6
-simple-websocket==1.0.0
-
-# Machine Learning and Data Analysis
-scikit-learn==1.4.0
-pandas==2.2.0
-numpy==1.26.3
-
-# Device Detection
-mac-vendor-lookup==0.1.12
-
-# Geofencing and Spatial Analysis
-Shapely==2.0.2
-geopy==2.4.1
+fastapi>=0.111,<0.112
+uvicorn[standard]>=0.29,<0.30
+PyQt6
+typer
+requests
+python-dotenv
+scikit-learn
+pandas
+numpy
+mac-vendor-lookup
+Shapely
+geopy
+pytest-asyncio

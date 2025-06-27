@@ -1,0 +1,20 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install ruff black pytest pytest-asyncio pyinstaller
+      - run: ./scripts/bootstrap.sh
+      - run: ruff .
+      - run: black --check .
+      - run: pytest -q
+      - run: ./scripts/build.sh
+        timeout-minutes: 10
