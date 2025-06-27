@@ -1,5 +1,6 @@
 # Core dependencies
 Flask==2.2.2
+Werkzeug<3
 bleak==0.20.2
 python-dotenv==1.0.0
 requests==2.31.0
