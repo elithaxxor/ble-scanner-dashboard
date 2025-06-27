@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import config
 from core import scanner
+from sqlmodel import create_engine
 from core.db import get_devices, init_db
 
 
@@ -23,6 +24,7 @@ def test_scan_once(tmp_path, monkeypatch):
     from core import db as core_db
 
     monkeypatch.setattr(core_db, "DB_PATH", str(db))
+    core_db._engine = create_engine(f"sqlite:///{db}")
     init_db()
     monkeypatch.setattr(
         scanner, "BleakScanner", SimpleNamespace(discover=fake_discover)
