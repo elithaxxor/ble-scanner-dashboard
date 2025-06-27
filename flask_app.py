@@ -1,13 +1,16 @@
 """Minimal Flask dashboard for BLE scans."""
 
 import asyncio
+import json
 import signal
-import sqlite3
 from typing import List
 
 from flask import Flask, redirect, render_template_string, request, url_for
 
-from config import DB_PATH
+from sqlmodel import Session, select
+
+from core.db import get_engine
+from core.models import Device
 from core.utils import setup_logging
 
 setup_logging()
@@ -31,15 +34,19 @@ TEMPLATE = """
 
 @app.route("/")
 def index():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT mac, vendor, last_seen, json_extract(rssi_history, '$[-1].rssi') as rssi FROM devices ORDER BY last_seen DESC LIMIT 20"
-    )
-    devices = cur.fetchall()
-    conn.close()
-    return render_template_string(TEMPLATE, devices=devices)
+    with Session(get_engine()) as session:
+        stmt = select(Device).order_by(Device.last_seen.desc()).limit(20)
+        results = []
+        for dev in session.exec(stmt):
+            hist = json.loads(dev.rssi_history or "[]")
+            rssi = hist[-1]["rssi"] if hist else None
+            results.append({
+                "mac": dev.mac,
+                "vendor": dev.vendor,
+                "last_seen": dev.last_seen,
+                "rssi": rssi,
+            })
+    return render_template_string(TEMPLATE, devices=results)
 
 
 @app.get("/history")
@@ -47,15 +54,14 @@ def history():
     page = int(request.args.get("page", "1"))
     per_page = 20
     offset = (page - 1) * per_page
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT mac, vendor, last_seen FROM devices ORDER BY last_seen DESC LIMIT ? OFFSET ?",
-        (per_page, offset),
-    )
-    rows = cur.fetchall()
-    conn.close()
+    with Session(get_engine()) as session:
+        stmt = (
+            select(Device)
+            .order_by(Device.last_seen.desc())
+            .limit(per_page)
+            .offset(offset)
+        )
+        rows = [r.dict() for r in session.exec(stmt)]
     next_url = url_for("history", page=page + 1)
     prev_url = url_for("history", page=page - 1) if page > 1 else None
     html = (

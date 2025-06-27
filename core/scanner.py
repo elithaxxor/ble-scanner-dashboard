@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import sqlite3
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -10,8 +9,10 @@ from typing import Dict, Optional
 from bleak import BleakScanner
 from mac_vendor_lookup import MacLookup
 
-from config import DB_PATH
-from core.db import init_db, purge_old_entries
+from sqlmodel import Session
+
+from core.db import get_engine, init_db, purge_old_entries
+from core.models import Device
 from core.utils import setup_logging
 from mqtt_client import publish_event
 from notifications import send_all_notifications
@@ -110,38 +111,27 @@ def _update_device_sync(
     address: str, _name: str, rssi: int, vendor: Optional[str]
 ) -> None:
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        now = datetime.now()
-        cursor.execute(
-            "SELECT rssi_history FROM devices WHERE mac = ?",
-            (address,),
-        )
-        res = cursor.fetchone()
-        if res:
-            history = json.loads(res[0] or "[]")
-            history.append({"t": now.isoformat(), "rssi": rssi})
-            cursor.execute(
-                "UPDATE devices SET last_seen=?, vendor=?, rssi_history=? WHERE mac=?",
-                (now, vendor, json.dumps(history), address),
-            )
-        else:
-            cursor.execute(
-                "INSERT INTO devices (mac, vendor, first_seen, last_seen, rssi_history) VALUES (?, ?, ?, ?, ?)",
-                (
-                    address,
-                    vendor,
-                    now,
-                    now,
-                    json.dumps([{"t": now.isoformat(), "rssi": rssi}]),
-                ),
-            )
-        conn.commit()
+        with Session(get_engine()) as session:
+            now = datetime.now()
+            device = session.get(Device, address)
+            if device:
+                history = json.loads(device.rssi_history or "[]")
+                history.append({"t": now.isoformat(), "rssi": rssi})
+                device.last_seen = now
+                device.vendor = vendor
+                device.rssi_history = json.dumps(history)
+            else:
+                device = Device(
+                    mac=address,
+                    vendor=vendor,
+                    first_seen=now,
+                    last_seen=now,
+                    rssi_history=json.dumps([{"t": now.isoformat(), "rssi": rssi}]),
+                )
+                session.add(device)
+            session.commit()
     except Exception as exc:
         logger.error("DB error: %s", exc)
-    finally:
-        if "conn" in locals():
-            conn.close()
 
 
 async def update_device(address: str, name: str, rssi: int) -> None:
