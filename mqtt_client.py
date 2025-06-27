@@ -10,6 +10,10 @@ except Exception:  # pragma: no cover - optional dependency
 logger = logging.getLogger(__name__)
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "ble/events")
+MQTT_TLS = os.getenv("MQTT_TLS", "0") == "1"
+MQTT_TLS_CA = os.getenv("MQTT_TLS_CA")
+MQTT_TLS_CERT = os.getenv("MQTT_TLS_CERT")
+MQTT_TLS_KEY = os.getenv("MQTT_TLS_KEY")
 _client = mqtt.Client() if mqtt else None
 
 
@@ -18,6 +22,8 @@ def setup() -> None:
         logger.warning("paho-mqtt not installed; MQTT disabled")
         return
     try:
+        if MQTT_TLS:
+            _client.tls_set(ca_certs=MQTT_TLS_CA, certfile=MQTT_TLS_CERT, keyfile=MQTT_TLS_KEY)
         _client.connect(MQTT_BROKER)
         _client.loop_start()
         logger.info("Connected to MQTT broker %s", MQTT_BROKER)

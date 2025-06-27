@@ -1,7 +1,8 @@
 import asyncio
+import json
 import logging
 import sqlite3
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
@@ -15,18 +16,26 @@ from plugins import dispatch_event
 from mqtt_client import publish_event
 from core.db import init_db, purge_old_entries
 from core.utils import setup_logging
-from vendor_prefixes import VENDOR_PREFIXES
+from vendor_lookup import load_vendor_data, lookup_vendor
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 EVENT_BUS: "asyncio.Queue[dict]" = asyncio.Queue()
-EXECUTOR = ThreadPoolExecutor()
+THREAD_EXECUTOR: ThreadPoolExecutor | None = None
+PROCESS_EXECUTOR: ProcessPoolExecutor | None = None
 
 VENDOR_CACHE: Dict[str, str] = {}
 MAC_LOOKUP = MacLookup()
 
 MASTER_MAC_PATH = Path("master_mac.csv")
+
+
+def init_executors(threads: int, processes: int) -> None:
+    """Initialise thread and process pools."""
+    global THREAD_EXECUTOR, PROCESS_EXECUTOR
+    THREAD_EXECUTOR = ThreadPoolExecutor(max_workers=threads)
+    PROCESS_EXECUTOR = ProcessPoolExecutor(max_workers=processes) if processes > 0 else None
 
 
 def broadcast_event(event: dict) -> None:
@@ -38,28 +47,20 @@ def broadcast_event(event: dict) -> None:
 
 def load_vendor_cache(path: Path = MASTER_MAC_PATH) -> None:
     """Load vendor prefixes from builtin list and optional CSV file."""
-    VENDOR_CACHE.update(VENDOR_PREFIXES)
-    if not path.exists():
-        logger.warning("Vendor map file not found: %s", path)
-        logger.info("Using %d built-in vendors", len(VENDOR_CACHE))
-        return
-    with path.open() as f:
-        for line in f:
-            if "," in line:
-                mac, vendor = line.strip().split(",", 1)
-                VENDOR_CACHE[mac.upper()] = vendor
+    load_vendor_data(path)
     logger.info("Loaded %d vendors", len(VENDOR_CACHE))
 
 
-def vendor_for_mac(address: str) -> Optional[str]:
+async def vendor_for_mac(address: str) -> Optional[str]:
     """Return vendor for a MAC using cache or online lookup."""
     prefix = address.upper().replace(":", "")[:6]
     if prefix in VENDOR_CACHE:
         return VENDOR_CACHE[prefix]
-    try:
-        return MAC_LOOKUP.lookup(address)
-    except Exception:
-        return None
+    if PROCESS_EXECUTOR is None:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, MAC_LOOKUP.lookup, address)
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(PROCESS_EXECUTOR, MAC_LOOKUP.lookup, address)
 
 
 async def direction_finding_stub(device) -> Optional[float]:
@@ -78,34 +79,35 @@ def parse_ibeacon(data: bytes) -> Optional[Dict[str, str]]:
     }
 
 
-def _update_device_sync(address: str, name: str, rssi: int) -> None:
+def _update_device_sync(address: str, name: str, rssi: int, vendor: Optional[str]) -> None:
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         now = datetime.now()
         cursor.execute(
-            "SELECT frequency_count FROM Devices WHERE mac_address = ?",
+            "SELECT frequency_count, rssi_history FROM devices WHERE mac_address = ?",
             (address,),
         )
         res = cursor.fetchone()
-        vendor = vendor_for_mac(address)
         if res:
             new_count = res[0] + 1
+            history = json.loads(res[1] or "[]")
+            history.append({"t": now.isoformat(), "rssi": rssi})
             cursor.execute(
                 """
-                UPDATE Devices SET last_seen=?, frequency_count=?, rssi=?, device_name=?
+                UPDATE devices SET last_seen=?, frequency_count=?, rssi=?, device_name=?, rssi_history=?
                 WHERE mac_address=?
                 """,
-                (now, new_count, rssi, name, address),
+                (now, new_count, rssi, name, json.dumps(history), address),
             )
         else:
             cursor.execute(
                 """
-                INSERT INTO Devices (mac_address, device_name, first_seen, last_seen,
-                                    frequency_count, rssi, manufacturer)
-                VALUES (?, ?, ?, ?, 1, ?, ?)
+                INSERT INTO devices (mac_address, device_name, first_seen, last_seen,
+                                    frequency_count, rssi, manufacturer, rssi_history)
+                VALUES (?, ?, ?, ?, 1, ?, ?, ?)
                 """,
-                (address, name, now, now, rssi, vendor),
+                (address, name, now, now, rssi, vendor, json.dumps([{"t": now.isoformat(), "rssi": rssi}])),
             )
         conn.commit()
     except Exception as exc:
@@ -116,8 +118,9 @@ def _update_device_sync(address: str, name: str, rssi: int) -> None:
 
 
 async def update_device(address: str, name: str, rssi: int) -> None:
+    vendor = await vendor_for_mac(address)
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(EXECUTOR, _update_device_sync, address, name, rssi)
+    await loop.run_in_executor(THREAD_EXECUTOR, _update_device_sync, address, name, rssi, vendor)
 
 
 async def scan_once() -> None:
@@ -141,10 +144,11 @@ async def _worker(interval: int) -> None:
         await asyncio.sleep(interval)
 
 
-async def run_scanner(interval: int = 5, workers: int = 1) -> None:
+async def run_scanner(interval: int = 5, workers: int = 1, threads: int = 1, processes: int = 0) -> None:
     load_vendor_cache()
     init_db()
     purge_old_entries()
+    init_executors(threads, processes)
     tasks = [asyncio.create_task(_worker(interval)) for _ in range(workers)]
     try:
         await asyncio.gather(*tasks)

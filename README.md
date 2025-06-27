@@ -65,8 +65,9 @@ Return a single git patch generated with `git format-patch -1`.
 ```bash
 git clone https://github.com/elithaxxor/ble-scanner-dashboard.git
 cd ble-scanner-dashboard
-./setup.sh              # auto‑detects macOS vs Linux
+./setup.sh              # works on Linux and macOS
 ble-scan                # Typer CLI entry point
+ble-scan aggregate --endpoint http://other/api/export  # merge data
 ble-gui                 # PyQt desktop
 ble-web                 # FastAPI dashboard  (http://localhost:8000)
 
@@ -114,6 +115,7 @@ A modern Bluetooth Low Energy (BLE) scanner that monitors nearby devices and pro
 - 🔌 Runtime plugin system for custom analyzers/exporters
 - 📥 CLI command to install community plugins via apt/brew
 - 📡 MQTT broadcasting alongside WebSocket updates
+- 🔐 Encrypted MQTT (TLS) support
 - 🐳 Headless container mode for lightweight deployments
 - 📦 Docker packaging for easy deployment
 - 🛠️ Web-based configuration page
@@ -122,6 +124,9 @@ A modern Bluetooth Low Energy (BLE) scanner that monitors nearby devices and pro
 - ⚡ Concurrent scanning workers via asyncio
 - 🗂️ Centralized result dashboard with /export API
 - 🕹️ `sniff_my_ble.py` script with hotkey shutdown
+- 📈 Aggregator CLI for merging remote dashboards
+- 🌐 Graph relationships between nearby devices
+- 📄 Export dashboard data to CSV or PDF
 
 ## Requirements
 
@@ -147,7 +152,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```bash
 pip install -r requirements.txt
 ```
-4. Initialize the database by running the scanner once:
+4. Initialize the database (`ble_scanner.db`) by running the scanner once:
 ```bash
 python sniff_my_ble.py --interval 5 --workers 1
 ```
