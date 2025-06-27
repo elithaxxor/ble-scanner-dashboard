@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+
 from sqlmodel import Session, select
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import datetime
@@ -10,6 +11,10 @@ from typing import Dict, Optional
 from bleak import BleakScanner
 from mac_vendor_lookup import MacLookup
 
+from sqlmodel import Session
+
+from core.db import get_engine, init_db, purge_old_entries
+from core.models import Device
 from core.db import init_db, purge_old_entries
 from core.utils import setup_logging
 from mqtt_client import publish_event
@@ -112,6 +117,18 @@ def _update_device_sync(
     from core.models import Device
 
     try:
+        with Session(get_engine()) as session:
+            now = datetime.now()
+            device = session.get(Device, address)
+            if device:
+                history = json.loads(device.rssi_history or "[]")
+                history.append({"t": now.isoformat(), "rssi": rssi})
+                device.last_seen = now
+                device.vendor = vendor
+                device.rssi_history = json.dumps(history)
+            else:
+                device = Device(
+
         engine = get_engine()
         now = datetime.now()
         with Session(engine) as session:
@@ -130,6 +147,7 @@ def _update_device_sync(
                     last_seen=now,
                     rssi_history=json.dumps([{"t": now.isoformat(), "rssi": rssi}]),
                 )
+                session.add(device)
                 session.add(result)
             session.commit()
     except Exception as exc:
