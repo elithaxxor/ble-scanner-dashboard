@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import config
+from external_api import shodan_lookup, wigle_lookup
 
 router = APIRouter()
 templates = Jinja2Templates(directory="web/templates")
@@ -33,3 +34,13 @@ async def set_config(
     config.TELEGRAM_BOT_TOKEN = telegram_token
     config.TELEGRAM_CHAT_ID = telegram_chat
     return RedirectResponse(url="/config", status_code=303)
+
+
+@router.get("/shodan")
+async def shodan(query: str):
+    return JSONResponse(shodan_lookup(query))
+
+
+@router.get("/wigle")
+async def wigle(ssid: str):
+    return JSONResponse(wigle_lookup(ssid))
